@@ -1,0 +1,433 @@
+$(document).ready(function(){
+
+	$('.withSummernote textarea').each(function(){ 
+		var currentTA = $(this);
+		currentTA.summernote({
+			toolbar: [
+				// [groupName, [list of button]]
+				['style', ['bold', 'italic', 'underline', 'clear']],
+				['font', ['strikethrough', 'superscript', 'subscript']],
+				['fontsize', ['fontsize']],
+				['color', ['color']],
+				['picture'],
+				['table'],
+				['para', ['ul', 'ol', 'paragraph']],
+				['height', ['height']],
+				['codeview']
+			],
+
+			height: 150,
+
+			callbacks: {
+				onImageUpload: function(files, editor, welEditable) {
+					for (var i = files.length-1; i>=0; i--){
+						uploadImage(files[i], currentTA, editor, welEditable);
+					}
+				}
+			}
+		});
+		
+		function uploadImage(file, el, editor, welEditable) {
+			var data = new FormData();
+			data.append('file', file);
+			$.ajax({
+				data: data,
+				type: "POST",
+				url: "/savefile.php",
+				cache: false,
+				contentType: 'multipart/form-data',
+				contentType: false,
+				processData: false,
+				success: function(img) {
+					el.summernote('pasteHTML', '<p><img src="'+img+'"></p>');
+				},
+				error: function (jqXHR, textStatus, errorThrown) {
+					alert(textStatus + " " + errorThrown);
+				}
+			});
+		}		
+		
+		
+	});
+	
+
+	$('.modal').on('click', '.closemodal', function(){ $('.modal').modal('hide'); })
+	
+	$("table").on('mouseenter', '.editItem', function() { $(this).removeClass('btn-light').addClass('btn-primary'); });
+	$("table").on('mouseleave', '.editItem', function() { $(this).removeClass('btn-primary').addClass('btn-light'); });		
+			
+	$("table").on('mouseenter', '.trashItem', function() { $(this).removeClass('btn-light').addClass('btn-danger'); });
+	$("table").on('mouseleave', '.trashItem', function() { $(this).removeClass('btn-danger').addClass('btn-light'); });		
+
+	// Гуруҳнинг рангини ўзгартириш
+	$('#gbtypesets').on('click', '.vm-circle', function(){
+		var grcode = $(this).attr('data-gcode');
+		var gbtype = $(this).attr('data-gbtype');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "changeGT=true&grcode="+grcode+"&gbtype="+gbtype,
+			success: function(html){
+				location.reload();
+			}
+		});			
+	});
+	
+	// Гуруҳдан модулни ўчириш
+	$('table').on('click', '.delete_jsitem', function(){
+		var mid = $(this).attr('data-mid');
+		var gcode = $(this).attr('date-gcode');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "delete_jsitem&gcode="+gcode+"&mid="+mid,
+			success: function(html){
+				//$('#delete_jsitem_status').html(html);
+				location.reload();
+			}
+		});
+	});	
+	
+	// Иштирокчини ўчириш
+	$('table').on('click', '.delete_user', function(){
+		var ucode = $(this).attr('data-ucode');
+		var gcode = $(this).attr('date-gr');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "delete_user&gcode="+gcode+"&ucode="+ucode,
+			success: function(data){
+				location.reload();
+			}
+		});
+	});	
+	
+	// Иштирокчини таҳрирлаш
+	$('#tbl_users_list').on('click', '.editU', function(){
+		var ucode = $(this).attr('id');
+		var gcode = $(this).attr('date-gr');
+		$('#userInfo').modal('show');
+		var modalbody = $('#userInfo').find('.modal-body');
+		var modaltitle = $('#userInfo').find('.modal-title');
+		modaltitle.html('Иштирокчини таҳрирлаш');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "editU&gcode="+gcode+"&ucode="+ucode,
+			success: function(data){
+				modalbody.html(data);
+			}
+		});
+	});
+		
+	// жорий гуруҳга иштирокчи қўшиш
+	$('#tbl_users_list').on('click', 'button[name=btn_add_guser]', function(){
+		var sts = $(this).parents('td').find('span');
+		$.ajax({
+			type: "POST",
+			url: '/ajaxpost.php',
+			dataType: "json",
+			data: $('form[name=frm_addguser]').serialize(),
+			success: function(data){
+			 	if (data["ErrCode"] == 0){
+					location.reload();
+				}else{
+					sts.removeClass('text-success').addClass('text-danger').html(data["ErrNote"]);
+				}				
+				
+			}
+		});
+	});
+		
+	// жорий гуруҳга тест модулини қўшиш
+	$('#tbl_group_setting').on('click', 'button[name=btn_savesetting]', function(){
+		var sts = $(this).parents('td').find('span');
+		$.ajax({
+			type: "POST",
+			url: '/ajaxpost.php',
+			dataType: "json",
+			data: $('form[name=frm_savesetting]').serialize(),
+			success: function(data){
+			 	if (data["ErrCode"] == 0){
+					location.reload();
+				}else{
+					sts.removeClass('text-success').addClass('text-danger').html(data["ErrNote"]);
+				}				
+				
+			}
+		});
+	});
+
+	
+	// Гуруҳ ҳолатини ўзгартириш
+	$('.card').on('click', '#changeGroupLive', function(){
+		var live = $(this).attr('data-live');
+		var gcode = $(this).attr('data-gcode');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "changeGroupLive=true&live="+live+"&gcode="+gcode,
+			success: function(html){
+				location.reload();
+			}
+		});	
+	});
+	
+
+	// Тест саволларини Excel файлдан импорт қилиш
+	$('.card').on('click', 'button[name=importFromExcel]', function(){
+		var mcode = $(this).attr('data-mcode');
+		$('#testInfo').modal('show');
+		var modalbody = $('#testInfo').find('.modal-body');
+		var modaltitle = $('#testInfo').find('.modal-title');
+		modaltitle.html('Excel файлдан юклаш');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "importFromExcel=true&mcode="+mcode,
+			success: function(data){
+				modalbody.html(data);
+			}
+		});
+	});
+	
+	// Тест саволларини архивланган (.zip) Word файлдан импорт қилиш
+	$('.card').on('click', 'button[name=importFromZip]', function(){
+		var mcode = $(this).attr('data-mcode');
+		$('#testInfo').modal('show');
+		var modalbody = $('#testInfo').find('.modal-body');
+		var modaltitle = $('#testInfo').find('.modal-title');
+		modaltitle.html('Архивланган Word файлдан юклаш');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "importFromZip=true&mcode="+mcode,
+			success: function(data){
+				modalbody.html(data);
+			}
+		});
+	});
+	
+	// Тест саволларининг вариантларини аралаштириш
+	$('.card').on('click', 'button[name=mixup]', function(){
+		var mcode = $(this).attr('data-mcode');
+		$('#testInfo').modal('show');
+		var modalbody = $('#testInfo').find('.modal-body');
+		var modaltitle = $('#testInfo').find('.modal-title');
+		modaltitle.html('Тест саволларининг вариантларини аралаштириш');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "mixup=true&mcode="+mcode,
+			success: function(data){
+				modalbody.html(data);
+			}
+		});
+	});
+	
+	// Тестни саволини ўчириш
+	$('#example1').on('click', '.deleteTest', function(){
+		var id = $(this).attr('id');
+		var mcode = $(this).attr('data-mcode');
+		
+		
+		$('#testInfo').modal('show');
+		var modalbody = $('#testInfo').find('.modal-body');
+		var modaltitle = $('#testInfo').find('.modal-title');
+		modaltitle.html('Тест саволини ўчириш');
+		
+		modalbody.html('<form method="post" action="/testqt/view?mcode='+mcode+'"><h3 class="text-center">Тест саволини ўчиришни тасдиқлайсизми?</h3><hr><div class="row"><div class="col-6"><div class="form-check mb-4"><input class="form-check-input" type="checkbox" name="confirm" value="yes" id="flexCheckDefault" /><label class="form-check-label text-danger" for="flexCheckDefault"> Ўчиришни тасдиқлайман </label> </div> </div> <div class="col-6 text-center"> <div class="form-outline mb-4"> <input type="hidden" name="btn_post" value="true">  <input type="hidden" name="qid" value="'+id+'">  <input type="hidden" name="mcode" value="'+mcode+'"> <input type="submit" name="btn_dropTestQ" value="Ўчириш" class="btn btn-danger btn-block"> </div> </div> </div> </form>');
+		/* 
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "deleteTest&mcode="+mcode+"&id="+id,
+			success: function(data){
+				modalbody.html(data);
+			}
+		});
+		
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "deleteTest&mcode="+mcode+"&id="+id,
+			success: function(html){
+				window.location = window.location.href.split("#")[0];
+			}
+		}); */
+	});
+
+
+
+
+		
+	// Тизим тилини ўзгартириш
+	$('a[name=syslang]').click(function(){
+		var slang = $(this).attr('id');
+		$.ajax({
+			type: "GET", 
+			url: "/action.php",
+			data: "changeLang=true&slang="+slang,
+			success: function(html){
+				location.reload();
+			}
+		});	
+	});
+
+	$('button[name=confirmemail]').click(function(){
+		var email = $('input[type=email]').val();
+		$('input[type=email]').attr("disabled", true);
+		$.confirm({
+			title: 'Электрон почта манлизи',
+			content: 'Бу сизнинг электрон почта манзилингизми?',
+			confirmButton: 'Ha',
+			confirmButtonClass: 'btn-info',
+			icon: 'fa fa-spinner fa-spin',
+			animation: 'rotateX',
+			confirm: function(){
+				$.ajax({
+					type: "GET", 
+					url: "/action.php",
+					data: "sendCCodeToEmial="+email,
+					success: function(html){
+						$('#secStepChangePassw').css('display','block');
+						
+						$.confirm({
+							title: 'Натижа',
+							content: '<h1>Тасдиқ коди кўрсатилган электрон почта манлизилига юборилди!</h1>',
+							confirmButton: 'ОК',
+							confirmButtonClass: 'btn-info',
+							icon: 'fa fa-check',
+							animation: 'rotateX'
+						});
+						
+						toastr["success"]("Код", "жўнатилди!")
+						toastr.options = {
+						  "closeButton": true,
+						  "debug": false,
+						  "newestOnTop": false,
+						  "progressBar": true,
+						  "positionClass": "toast-top-right",
+						  "preventDuplicates": false,
+						  "onclick": null,
+						  "showDuration": "300",
+						  "hideDuration": "1000",
+						  "timeOut": "5000",
+						  "extendedTimeOut": "1000",
+						  "showEasing": "swing",
+						  "hideEasing": "linear",
+						  "showMethod": "fadeIn",
+						  "hideMethod": "fadeOut"
+						}
+					}
+				});	
+			}
+		});	
+	});	
+	
+	
+	//***** тестлар билан ишлаш
+	$('a[name=importFromExcel]').click(function(){
+		var param = $(this).attr('id');
+		$.confirm({
+			title: 'Тестлар базасини MS Excel файлидан импорт қилиш',
+			cancelButton: false,
+			confirmButton: false,
+			content: 'url:/confirm.php?importFromExcel&param='+param,
+		});			
+	});	
+	
+	$('a[name=importFromZip]').click(function(){
+		var param = $(this).attr('id');
+		$.confirm({
+			title: 'Тестлар базасини архивдан импорт қилиш',
+			cancelButton: false,
+			confirmButton: false,
+			content: 'url:/confirm.php?importFromZip&param='+param,
+		});			
+	});
+
+	$('a[name=plusTest]').click(function(){
+		var param = $(this).attr('id');
+		$.confirm({
+			title: 'Тест қўшиш',
+			cancelButton: false,
+			confirmButton: false,
+			content: 'url:/confirm.php?loadPlusTestForm&param='+param,
+		});			
+	});
+
+	$('#example1').on('click', '.deleteTest', function(){
+		var id = $(this).attr('id');
+		var param = $(this).attr('date-qt');
+		$.confirm({
+			title: 'Ушбу тестни чиқармоқчимисиз?',
+			content: '<h2>Чиқармоқчи бўлсангиз [Ha] тугмасини босинг!</h2>',
+			confirmButton: 'Ha',
+			confirmButtonClass: 'btn-info',
+			icon: 'fa fa-spinner fa-spin',
+			autoClose: 'cancel|15000',
+			animation: 'rotateX',
+			confirm: function () {
+				$.ajax({
+					type: "GET", 
+					url: "/confirm.php",
+					data: "deleteTest&param="+param+"&id="+id,
+					success: function(html){
+						location.reload();							
+					}
+				});	
+			}
+		});		
+	});	
+	
+	// IP манзилни ўчириш модал ойнаси
+ 	$('#example1').on('click', '.removeIP', function(){
+		var id = $(this).attr('data-id');
+		$.confirm({
+			title: 'Ушбу IP манзилни ўчирмоқчимисиз?',
+			content: '<h2>Ўчирмоқчи бўлсангиз [Ha] тугмасини босинг!</h2>',
+			confirmButton: 'Ha',
+			confirmButtonClass: 'btn-info',
+			icon: 'fa fa-spinner fa-spin',
+			autoClose: 'cancel|15000',
+			animation: 'rotateX',
+			confirm: function () {
+				$.ajax({
+					type: "GET", 
+					url: "/confirm.php",
+					data: "removeIP&ipcode="+id,
+					success: function(html){
+						location.reload();							
+					}
+				});	
+			}
+		});		
+	});		
+
+
+});
+
+
+function copyToClipboardInput(elemID) {
+  var copyText = document.getElementById(elemID);
+
+  copyText.select();
+  copyText.setSelectionRange(0, 99999); /* For mobile devices */
+  document.execCommand("copy");
+}
+
+function copyToClipboardSpan(elemID) {
+    var copyText = document.getElementById(elemID);
+    var textArea = document.createElement("textarea");
+    textArea.value = copyText.textContent;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("Copy");
+    textArea.remove();;
+}
+
+function isEmail(email) {
+	var filter = /^[w-.+]+@[a-zA-Z0-9.-]+.[a-zA-z0-9]{2,4}$/;
+	return filter.test(email);
+}
